@@ -1,0 +1,36 @@
+<!-- log_viewer.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>日志 WebSocket 流</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #0f0; padding: 1em; }
+    #log { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>日志输出 (Port: <span id="port"></span>)</h2>
+  <div id="log">Connecting...</div>
+
+  <script>
+    const port = prompt("请输入端口号（对应你启动的子进程）:", "8001");
+    document.getElementById("port").innerText = port;
+
+    const ws = new WebSocket(`ws://localhost:8000/ws/logs/${port}`);
+    const logEl = document.getElementById("log");
+
+    ws.onmessage = (event) => {
+      logEl.innerText += event.data + "\n";
+    };
+
+    ws.onclose = () => {
+      logEl.innerText += "\n[WebSocket Closed]";
+    };
+
+    ws.onerror = (e) => {
+      logEl.innerText += "\n[WebSocket Error]";
+    };
+  </script>
+</body>
+</html>

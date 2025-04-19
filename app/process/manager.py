@@ -1,3 +1,5 @@
+# app/process/manager.py
+
 import asyncio
 from typing import Optional
 
@@ -7,6 +9,7 @@ class ProcessInfo:
         self.command = command
         self.port = port
         self.process: Optional[asyncio.subprocess.Process] = None
+        self.log_queue: Optional[asyncio.Queue] = None
 
 
 class ProcessManager:
@@ -21,13 +24,28 @@ class ProcessManager:
         process = await asyncio.create_subprocess_shell(
             command,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
         )
 
-        self.processes[port] = ProcessInfo(command, port)
-        self.processes[port].process = process
+        info = ProcessInfo(command, port)
+        info.process = process
+        info.log_queue = asyncio.Queue()
+        self.processes[port] = info
+
+        asyncio.create_task(self._read_logs_to_queue(process, info.log_queue))
         print(f"successful to start {command} ({port})")
         return process
+
+    async def _read_logs_to_queue(self, process: asyncio.subprocess.Process, queue: asyncio.Queue):
+        """从 stdout 异步读取日志并写入队列"""
+        try:
+            while True:
+                line = await process.stdout.readline()
+                if not line:
+                    break
+                await queue.put(line.decode("utf-8").rstrip())
+        except Exception as e:
+            await queue.put(f"[error] Failed reading log: {e}")
 
     async def stop_process(self, port: int):
         """终止子进程"""
@@ -45,3 +63,8 @@ class ProcessManager:
             for p, info in self.processes.items()
             if info.process and info.process.returncode is None
         ]
+
+    def get_log_queue(self, port: int) -> Optional[asyncio.Queue]:
+        """获取日志用于队列 WebSocket 推送"""
+        info = self.processes.get(port)
+        return info.log_queue if info else None

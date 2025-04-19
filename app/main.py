@@ -2,9 +2,12 @@
 import asyncio
 
 from fastapi import FastAPI
+from fastapi import WebSocket
 
 from app.gateway.launcher import build_supergateway_command
+from app.inspector.watcher import stream_logs
 from app.process.manager import ProcessManager
+from app.core.singleton import singleton_process_manager
 from app.process.port_pool import get_available_port
 
 app = FastAPI()
@@ -55,10 +58,15 @@ async def start_supergateway():
     tool_path = "/Users/aaronhu/PycharmProjects/mcp-box"
     port = 8001  # 实际中应来自 port_pool
     cmd = build_supergateway_command(tool_path, port)
-    pm = ProcessManager()
 
-    await pm.start_process(cmd, port)
-    await asyncio.sleep(10)
-    print("当前进程：", pm.list_running())
-    await pm.stop_process(port)
+    await singleton_process_manager.start_process(cmd, port)
+    await asyncio.sleep(3000)
+    print("当前进程：", singleton_process_manager.list_running())
+    await singleton_process_manager.stop_process(port)
+
     return {"status": "started", "port": port}
+
+
+@app.websocket("/ws/logs/{port}")
+async def websocket_logs(websocket: WebSocket, port: int):
+    await stream_logs(websocket, port)

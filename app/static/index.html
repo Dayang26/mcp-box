@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MCP 服务器管理</title>
+  <style>
+    :root {
+      --primary-color: #2196F3;
+      --success-color: #4CAF50;
+      --error-color: #F44336;
+      --background-color: #f5f5f5;
+      --card-background: #ffffff;
+      --text-color: #333333;
+      --border-color: #e0e0e0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      line-height: 1.6;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .add-server-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+
+    .add-server-btn:hover {
+      background-color: #1976D2;
+    }
+
+    .server-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .server-card {
+      background-color: var(--card-background);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 20px;
+      transition: transform 0.3s;
+    }
+
+    .server-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .server-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .server-name {
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .server-details {
+      margin-bottom: 15px;
+    }
+
+    .server-detail {
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .server-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .start-btn {
+      background-color: var(--success-color);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .stop-btn {
+      background-color: var(--error-color);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .view-log-btn {
+      background-color: #607D8B;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .edit-btn {
+      background-color: #FF9800;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .delete-btn {
+      background-color: var(--error-color);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .server-detail.editable {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .server-detail.editable input {
+      flex: 1;
+      padding: 4px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .server-detail.editable input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    .server-detail.editable button {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .save-edit-btn {
+      background-color: var(--success-color);
+      color: white;
+    }
+
+    .cancel-edit-btn {
+      background-color: #9E9E9E;
+      color: white;
+    }
+
+    .log-panel {
+      width: 40%;
+      background-color: #1E1E1E;
+      color: #D4D4D4;
+      padding: 20px;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      color: white;
+    }
+
+    .log-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .log-content {
+      flex: 1;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      background-color: #1E1E1E;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .no-server-selected {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #666;
+    }
+
+    /* 模态框样式保持不变 */
+    .add-server-form {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: var(--card-background);
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 500px;
+      display: none;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .cancel-btn {
+      background-color: #9E9E9E;
+      color: white;
+    }
+
+    .save-btn {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    /* 确认对话框样式 */
+    .confirm-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: var(--card-background);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: none;
+    }
+
+    .confirm-message {
+      margin-bottom: 20px;
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="main-content">
+      <div class="header">
+        <h1 class="title">MCP 服务器管理</h1>
+        <button class="add-server-btn" onclick="showAddServerForm()">添加服务器</button>
+      </div>
+
+      <div class="server-list" id="server-list">
+        <!-- 服务器卡片将通过JavaScript动态添加 -->
+      </div>
+    </div>
+
+    <div class="log-panel">
+      <div class="log-header">
+        <div class="log-title">实时日志</div>
+        <button class="action-btn" onclick="clearLog()" style="background-color: #607D8B; color: white; padding: 4px 8px; border-radius: 4px;">清除日志</button>
+      </div>
+      <div class="log-content" id="log-content">
+        <div class="no-server-selected">请选择一个服务器查看日志</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加服务器表单 -->
+  <div class="add-server-form" id="add-server-form">
+    <h2>添加新服务器</h2>
+    <form id="server-form">
+      <div class="form-group">
+        <label class="form-label">服务器名称</label>
+        <input type="text" class="form-input" id="server-name" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">命令</label>
+        <input type="text" class="form-input" id="command" placeholder="如 npx" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">参数</label>
+        <input type="text" class="form-input" id="args" placeholder='如 -y @modelcontextprotocol/server-filesystem "/some/path"' required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">端口 (可选)</label>
+        <input type="number" class="form-input" id="port" placeholder="如 8001">
+      </div>
+      <div class="form-actions">
+        <button type="button" class="action-btn cancel-btn" onclick="hideAddServerForm()">取消</button>
+        <button type="submit" class="action-btn save-btn">保存</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 确认对话框 -->
+  <div class="confirm-dialog" id="confirm-dialog">
+    <div class="confirm-message" id="confirm-message">确定要删除这个服务器吗？</div>
+    <div class="confirm-actions">
+      <button class="action-btn cancel-btn" onclick="hideConfirmDialog()">取消</button>
+      <button class="action-btn save-btn" onclick="confirmDelete()">确定</button>
+    </div>
+  </div>
+
+  <script>
+    const serverListEl = document.getElementById('server-list');
+    const addServerFormEl = document.getElementById('add-server-form');
+    const serverFormEl = document.getElementById('server-form');
+    const logContentEl = document.getElementById('log-content');
+    const confirmDialogEl = document.getElementById('confirm-dialog');
+    const confirmMessageEl = document.getElementById('confirm-message');
+
+    let currentWS = null;
+    let servers = JSON.parse(localStorage.getItem('servers') || '[]');
+    let selectedServerId = null;
+    let serverToDelete = null;
+    let wsConnections = new Map(); // 存储所有WebSocket连接
+    let statusCheckInterval = null; // 状态检查定时器
+
+    // 获取API基础URL
+    function getBaseUrl() {
+      if (window.location.hostname === 'localhost' && window.location.port === '63342') {
+        return 'http://localhost:8000';
+      }
+      return window.location.origin;
+    }
+
+    // 显示/隐藏添加服务器表单
+    function showAddServerForm() {
+      addServerFormEl.style.display = 'block';
+    }
+
+    function hideAddServerForm() {
+      addServerFormEl.style.display = 'none';
+    }
+
+    // 显示/隐藏确认对话框
+    function showConfirmDialog(serverId) {
+      serverToDelete = serverId;
+      confirmDialogEl.style.display = 'block';
+    }
+
+    function hideConfirmDialog() {
+      confirmDialogEl.style.display = 'none';
+      serverToDelete = null;
+    }
+
+    // 渲染服务器列表
+    function renderServers() {
+      serverListEl.innerHTML = '';
+      servers.forEach(server => {
+        const card = document.createElement('div');
+        card.className = 'server-card';
+        card.innerHTML = `
+          <div class="server-header">
+            <span class="server-name">${server.name}</span>
+          </div>
+          <div class="server-details">
+            <div class="server-detail ${!server.running ? 'editable' : ''}" data-field="command">
+              <strong>命令:</strong>
+              ${!server.running ? `
+                <input type="text" value="${server.command}" ${server.running ? 'disabled' : ''} onchange="saveEdit('${server.id}', 'command', this.value)">
+              ` : server.command}
+            </div>
+            <div class="server-detail ${!server.running ? 'editable' : ''}" data-field="args">
+              <strong>参数:</strong>
+              ${!server.running ? `
+                <input type="text" value="${server.args.join(' ')}" ${server.running ? 'disabled' : ''} onchange="saveEdit('${server.id}', 'args', this.value)">
+              ` : server.args.join(' ')}
+            </div>
+            <div class="server-detail ${!server.running ? 'editable' : ''}" data-field="port">
+              <strong>端口:</strong>
+              ${!server.running ? `
+                <input type="number" value="${server.port || ''}" ${server.running ? 'disabled' : ''} placeholder="自动分配" onchange="saveEdit('${server.id}', 'port', this.value)">
+              ` : (server.port || '自动分配')}
+            </div>
+          </div>
+          <div class="server-actions">
+            <div class="action-buttons">
+              ${server.running ? `
+                <button class="stop-btn" onclick="stopServer('${server.id}')">停止</button>
+              ` : `
+                <button class="start-btn" onclick="startServer('${server.id}')">运行</button>
+              `}
+              <button class="view-log-btn" onclick="viewLog('${server.id}')">查看日志</button>
+              ${!server.running ? `<button class="edit-btn" onclick="toggleEdit('${server.id}')">编辑</button>` : ''}
+              <button class="delete-btn" onclick="showConfirmDialog('${server.id}')">删除</button>
+            </div>
+          </div>
+        `;
+        serverListEl.appendChild(card);
+      });
+    }
+
+    // 保存服务器
+    serverFormEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const server = {
+        id: Date.now().toString(),
+        name: document.getElementById('server-name').value,
+        command: document.getElementById('command').value,
+        args: document.getElementById('args').value.trim().split(/\s+/),
+        port: document.getElementById('port').value ? parseInt(document.getElementById('port').value) : null,
+        running: false
+      };
+
+      servers.push(server);
+      localStorage.setItem('servers', JSON.stringify(servers));
+      renderServers();
+      hideAddServerForm();
+      serverFormEl.reset();
+    });
+
+    // 检查服务器状态
+    async function checkServerStatus() {
+      try {
+        const res = await fetch(`${getBaseUrl()}/running-processes`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const runningProcesses = await res.json();
+
+        // 更新所有服务器的状态
+        let needUpdate = false;
+        servers.forEach(server => {
+          if (server.running) {
+            const isRunning = runningProcesses.some(process => process.port === server.actualPort);
+            if (!isRunning) {
+              // 服务器异常停止
+              server.running = false;
+              needUpdate = true;
+              
+              // 关闭WebSocket连接
+              const ws = wsConnections.get(server.id);
+              if (ws) {
+                ws.close();
+                wsConnections.delete(server.id);
+              }
+
+              // 如果当前正在查看这个服务器的日志
+              if (selectedServerId === server.id) {
+                logContentEl.innerHTML += '\n[服务器异常停止]';
+              }
+            }
+          }
+        });
+
+        if (needUpdate) {
+          localStorage.setItem('servers', JSON.stringify(servers));
+          renderServers();
+        }
+      } catch (error) {
+        console.error('检查服务器状态失败:', error);
+      }
+    }
+
+    // 启动服务器
+    async function startServer(serverId) {
+      const server = servers.find(s => s.id === serverId);
+      if (!server) return;
+
+      try {
+        const res = await fetch(`${getBaseUrl()}/start-process`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            command: server.command,
+            args: server.args,
+            port: server.port
+          })
+        });
+
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        
+        server.running = true;
+        server.actualPort = data.port;
+        localStorage.setItem('servers', JSON.stringify(servers));
+        renderServers();
+
+        // 如果当前没有选中的服务器，自动选中这个
+        if (!selectedServerId) {
+          selectedServerId = serverId;
+          viewLog(serverId);
+        }
+
+        // 为新启动的服务器创建WebSocket连接
+        createWebSocketConnection(serverId);
+      } catch (error) {
+        alert(`启动失败: ${error.message}`);
+        server.running = false;
+        localStorage.setItem('servers', JSON.stringify(servers));
+        renderServers();
+      }
+    }
+
+    // 停止服务器
+    async function stopServer(serverId) {
+      const server = servers.find(s => s.id === serverId);
+      if (!server || !server.running) return;
+
+      try {
+        const res = await fetch(`${getBaseUrl()}/stop-process/${server.actualPort}`, {
+          method: 'POST'
+        });
+
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        
+        server.running = false;
+        localStorage.setItem('servers', JSON.stringify(servers));
+        renderServers();
+        
+        // 关闭并移除WebSocket连接
+        const ws = wsConnections.get(serverId);
+        if (ws) {
+          ws.close();
+          wsConnections.delete(serverId);
+        }
+
+        if (selectedServerId === serverId) {
+          logContentEl.innerHTML = '服务器已停止\n';
+        }
+      } catch (error) {
+        // 如果停止请求失败，可能是服务器已经异常停止
+        server.running = false;
+        localStorage.setItem('servers', JSON.stringify(servers));
+        renderServers();
+        
+        const ws = wsConnections.get(serverId);
+        if (ws) {
+          ws.close();
+          wsConnections.delete(serverId);
+        }
+
+        if (selectedServerId === serverId) {
+          logContentEl.innerHTML = '服务器已停止\n';
+        }
+      }
+    }
+
+    // 创建WebSocket连接
+    function createWebSocketConnection(serverId) {
+      const server = servers.find(s => s.id === serverId);
+      if (!server || !server.running) return;
+
+      // 如果已经存在连接，先关闭
+      const existingWs = wsConnections.get(serverId);
+      if (existingWs) {
+        existingWs.close();
+      }
+
+      try {
+        const wsUrl = `${getBaseUrl().replace(/^http/, 'ws')}/ws/logs/${server.actualPort}`;
+        const ws = new WebSocket(wsUrl);
+        
+        ws.onmessage = (event) => {
+          if (selectedServerId === serverId) {
+            const currentContent = logContentEl.innerHTML;
+            if (currentContent === '连接中...\n' || currentContent === '服务器未运行\n') {
+              logContentEl.innerHTML = event.data + '\n';
+            } else {
+              logContentEl.innerHTML += event.data + '\n';
+            }
+            logContentEl.scrollTop = logContentEl.scrollHeight;
+          }
+        };
+        
+        ws.onclose = () => {
+          if (selectedServerId === serverId) {
+            logContentEl.innerHTML += '\n[WebSocket 连接已关闭]';
+          }
+        };
+        
+        ws.onerror = (e) => {
+          if (selectedServerId === serverId) {
+            logContentEl.innerHTML += '\n[WebSocket 错误: ' + e.message + ']';
+          }
+        };
+
+        wsConnections.set(serverId, ws);
+      } catch (error) {
+        if (selectedServerId === serverId) {
+          logContentEl.innerHTML += '\n[连接失败: ' + error.message + ']';
+        }
+      }
+    }
+
+    // 查看日志
+    function viewLog(serverId) {
+      const server = servers.find(s => s.id === serverId);
+      if (!server) return;
+
+      selectedServerId = serverId;
+      logContentEl.innerHTML = server.running ? '连接中...\n' : '服务器未运行\n';
+
+      if (server.running) {
+        // 如果已经有连接，直接使用
+        const ws = wsConnections.get(serverId);
+        if (!ws) {
+          createWebSocketConnection(serverId);
+        }
+      }
+    }
+
+    // 初始化时创建所有运行中服务器的WebSocket连接
+    function initializeWebSocketConnections() {
+      servers.forEach(server => {
+        if (server.running) {
+          createWebSocketConnection(server.id);
+        }
+      });
+    }
+
+    // 确认删除
+    function confirmDelete() {
+      if (!serverToDelete) return;
+
+      servers = servers.filter(s => s.id !== serverToDelete);
+      localStorage.setItem('servers', JSON.stringify(servers));
+      
+      if (selectedServerId === serverToDelete) {
+        selectedServerId = null;
+        if (currentWS) {
+          currentWS.close();
+          currentWS = null;
+        }
+        logContentEl.innerHTML = '<div class="no-server-selected">请选择一个服务器查看日志</div>';
+      }
+      
+      renderServers();
+      hideConfirmDialog();
+    }
+
+    // 编辑相关函数
+    function toggleEdit(serverId) {
+      const server = servers.find(s => s.id === serverId);
+      if (!server || server.running) return;
+
+      const details = document.querySelectorAll(`.server-card[data-server-id="${serverId}"] .server-detail`);
+      details.forEach(detail => {
+        const field = detail.dataset.field;
+        const currentValue = server[field];
+        const input = detail.querySelector('input');
+        
+        if (input) {
+          input.value = field === 'args' ? currentValue.join(' ') : currentValue;
+        }
+      });
+
+      renderServers();
+    }
+
+    function saveEdit(serverId, field, value) {
+      const server = servers.find(s => s.id === serverId);
+      if (!server || server.running) return;
+
+      if (field === 'args') {
+        value = value.trim().split(/\s+/);
+      } else if (field === 'port') {
+        value = value ? parseInt(value) : null;
+      }
+
+      server[field] = value;
+      localStorage.setItem('servers', JSON.stringify(servers));
+    }
+
+    // 添加清除日志功能
+    function clearLog() {
+      logContentEl.innerHTML = selectedServerId ? '日志已清除\n' : '请选择一个服务器查看日志';
+    }
+
+    // 初始化
+    renderServers();
+    initializeWebSocketConnections();
+    
+    // 启动状态检查定时器
+    statusCheckInterval = setInterval(checkServerStatus, 5000); // 每5秒检查一次
+
+    // 页面关闭时清理
+    window.addEventListener('beforeunload', () => {
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+      }
+      wsConnections.forEach(ws => ws.close());
+    });
+  </script>
+</body>
+</html>

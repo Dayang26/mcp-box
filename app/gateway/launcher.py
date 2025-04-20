@@ -1,4 +1,7 @@
 # app/gateway/launcher.py
+from app.models.types import LaunchConfig
+from app.process.port_pool import get_available_port
+
 
 def build_supergateway_command(tool_path: str, port: int) -> str:
     """
@@ -12,3 +15,19 @@ def build_supergateway_command(tool_path: str, port: int) -> str:
     inner = f'npx -y @modelcontextprotocol/server-filesystem \\"{safe_path}\\"'
     cmd = f'npx -y supergateway --stdio "{inner}" --port {port}'
     return cmd
+
+
+def build_command(config: LaunchConfig) -> tuple[str, int]:
+    """
+    根据用户提供的配置构建 supergateway 启动命令
+    :param config: 用户提交的命令启动配置
+    :return: 构建好的 supergateway 命令字符串 和 实际使用的端口
+    """
+    port = config.port or get_available_port()
+
+    safe_args = [arg.replace('"', '\\"') for arg in config.args]
+    inner_command = f'{config.command} {" ".join(safe_args)}'
+
+    cmd_str = f'npx -y supergateway --stdio "{inner_command}" --port {port}'
+
+    return cmd_str, port
